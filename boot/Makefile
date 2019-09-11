@@ -6,3 +6,6 @@ boot_sector.bin: boot_sector.asm
 
 run: boot_sector.bin
 	qemu-system-x86_64 $^
+
+clean:
+	rm -f *.o *.bin
