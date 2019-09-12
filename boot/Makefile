@@ -1,10 +1,10 @@
 
-all: boot_sector.bin
+all: bootsect.bin
 
-boot_sector.bin: boot_sector.asm
+bootsect.bin: bootsect.asm
 	nasm -f bin -o $@ $^
 
-run: boot_sector.bin
+run: bootsect.bin
 	qemu-system-x86_64 -drive format=raw,file=$^
 
 clean:
