@@ -11,7 +11,6 @@ ENDSEG equ 0x4000
 start:
     mov ax, BOOTSEG
     mov ds, ax
-    mov [BOOT_DRIVE], dl    ; BIOS stores boot drive in dl, so it's
     mov ax, INITSEG
     mov es, ax
     mov cx, 256
@@ -29,12 +28,11 @@ go: mov ax, cs
     call bios_print
 
 load_setup:
-    mov dl, [BOOT_DRIVE]   ; drive
-    mov dh, 0x00           ; head 0
-    ;mov dx, 0x0000    ; driver 0, head 0
+    mov dx, 0x0080    ; DH = 0 (head), drive = 80h (0th hard disk)
     mov cx, 0x0002    ; sector 2, cylinder 0
     mov bx, 0x0200    ; address = 512, in INITSEG
-    mov ax, 0x0200+SETUPLEN
+    mov al, SETUPLEN  ; setup sectors
+    mov ah, 0x02
     int 0x13          ; read it
     jnc ok_load_setup
     mov bx, LOAD_SETUP_FAIL
@@ -43,7 +41,40 @@ load_setup:
 ok_load_setup:
     mov bx, LOAD_SETUP_DONE
     call bios_print
+
+load_sys:
+DAPACK:
+    db 0x10    ;packet size
+    db 0
+    dw 52    ;number of blocks
+    dw 0       ;destination offset
+    dw SYSSEG  ;destination segment
+    dd SETUPLEN   ;start lba block
+    dd 0
+
+    mov si, DAPACK
+    mov ah, 0x42
+    mov dl, 0x80 ; hard disck, drive 0
+    int 0x13
+
+    jnc ok_load_sys
+
+    mov bx, LOAD_SYS_FAIL
+    call bios_print
     jmp $
+ok_load_sys:
+    mov bx, LOAD_SYS_DONE
+    call bios_print
+
+    mov bx, SYSSEG
+    mov ds, bx
+    mov bx, 0
+    call bios_print
+    mov bx, INITSEG
+    mov ds, bx
+
+    jmp $
+    ;jmp SETUPSEG:0
 
 ; bios print function
 bios_print:
@@ -62,8 +93,6 @@ bios_print_done:
 
 ; data
 
-BOOT_DRIVE: db 0
-
 WELCOME_MSG:
     db 'Welcome to Lemon', 0x0d, 0x0a, 0 ; followed by \r\n
 
@@ -73,13 +102,19 @@ LOAD_SETUP_DONE:
 LOAD_SETUP_FAIL:
     db 'Setup load fail', 0x0d, 0x0a, 0 ; followed by \r\n
 
-; padding and magic number
+LOAD_SYS_DONE:
+    db 'System load success', 0x0d, 0x0a, 0 ; followed by \r\n
+
+LOAD_SYS_FAIL:
+    db 'System load fail', 0x0d, 0x0a, 0 ; followed by \r\n
+
+; padding
 times 510-($-$$) db 0
 
+;magic number
 dw 0xaa55
 
-; fill 5 sectors to test disk read
-times 256 dw 0xdada
-times 256 dw 0xface
-times 256 dw 0xdada
-times 256 dw 0xface
+; fill 4 sectors to test setup load
+times 512 db 'abc',0
+; fill 64 sectors to test system load
+times 512*16 db 'def',0
