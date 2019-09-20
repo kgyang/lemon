@@ -1,17 +1,16 @@
-
 all: kernel.bin
 
-bool.o : boot.S
-	as --x32 -I ./ -o $@ $^
+boot.o : boot.S
+	gcc -ffreestanding -I. -c -Xassembler --32 -o $@ $^
 
 kernel.o : kernel.c
-	gcc -o $@ -c $^
+	gcc -ffreestanding -m32 -I. -c -o $@ $^
 
 kernel.bin: boot.o kernel.o
-	ld -o $@ $^
+	gcc -nostartfiles -nostdlib -nodefaultlibs -m32 -o $@ $^
 
 run: kernel.bin
-	qemu-system-x86_64 -kernel $^
+	qemu-system-i386 -kernel $^
 
 clean:
 	rm -f *.o *.bin
