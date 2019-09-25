@@ -25,16 +25,25 @@ go:
     mov ax, 0x00
     mov dl, 0x80           ; drive 0x80
     INT 0x13
+
 ;read boot1 sectors from the hard
-    mov bx, BOOT1START
-    mov dl, 0x80           ; drive 0x80
-    mov dh, 0x00           ; head 0
-    mov ch, 0x00           ; cylinder 0
-    mov cl, 0x02           ; start reading from second sector
-    mov ah, 0x02           ; BIOS read sector function
-    mov al, 0x01           ; read 17 sectors
-    mov ah, 0x02
-    INT 0x13
+    ;mov bx, BOOT1START
+    ;mov dl, 0x80           ; drive 0x80
+    ;mov dh, 0x00           ; head 0
+    ;mov ch, 0x00           ; cylinder 0
+    ;mov cl, 0x02           ; start reading from second sector
+    ;mov ah, 0x02           ; BIOS read sector function
+    ;mov al, 0x11           ; read 17 sectors
+    ;INT 0x13
+
+    mov word [LBA_ADDR+2], 0x0011 ;17 blocks
+    mov word [LBA_ADDR+4], BOOT1START ;offset
+    mov dword [LBA_ADDR+8], 0x00000001 ;start from the second block
+    mov si, LBA_ADDR
+    mov ah, 0x42
+    mov dl, 0x80 ; hard disck, drive 0
+    int 0x13
+
     jnc load_boot1_done
     mov bx, LOAD_BOOT1_FAIL
     call bios_print
@@ -61,6 +70,13 @@ bios_print_done:
     ret
 
 ; data
+LBA_ADDR:
+    dw 0x0010 ; packet size
+    dw 0x0000 ; block number
+    dw 0x0000 ; destination offset
+    dw 0x0000 ; destination segment
+    dd 0x00000000 ; block start
+    dd 0x00000000 ; padding
 LOAD_BOOT1_DONE:
     db 'Load Boot1 Success', 0x0d, 0x0a, 0 ; followed by \r\n
 
